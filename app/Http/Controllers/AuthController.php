@@ -40,7 +40,9 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return [
-                'message' => 'The provided credentials are incorrect'
+                'errors' => [
+                    'email' => 'The provided credentials are incorrect'
+                ]
             ];
         }
 
@@ -54,9 +56,11 @@ class AuthController extends Controller
 
 
     public function logout(Request $request)
-    {
+    {   
+        // deletes the userToken of the currently logged in user
         $request->user()->tokens()->delete();
 
-        return ['message' => 'You are logged out'];
+        return response()->json(['message' => 'You are logged out!'], 200);
+        // return ['message' => 'You are logged out'];
     }
 }
