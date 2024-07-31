@@ -20,11 +20,13 @@ class PostController extends Controller implements HasMiddleware
 
     public function index()
     {
-        $posts = Post::all();
-        return $posts;
+
+        // Eager loading
+        $posts = Post::with('user')->latest()->get();
         if (!$posts) {
-            return response()->json();
+            return response()->json(['msg' => 'no posts found']);
         }
+        return response()->json(['posts' => $posts, 'success' => true, 'msg' => 'Posts fetched successfully.'], 200);
     }
 
 
@@ -41,14 +43,21 @@ class PostController extends Controller implements HasMiddleware
         // creating post thorugh logged in authenticated user object 
         $post = $request->user()->posts()->create($fields);
 
-        return ['posts' => $post];
+        if (!$post) {
+            return response()->json(['success' => false, 'msg' => 'Could not create post'], 500);
+        }
+        return response()->json(['post' => $post, 'user' => $post->user, 'success' => true, 'msg' => 'Post created successfully.'], 200);
+        // return ['posts' => $post];
     }
 
 
     public function show(Post $post)
     {
         // route model binding 
-        return  $post;
+        if (!$post) {
+            return response()->json(['success' => false, 'msg' => 'Post not found'], 404);
+        }
+        return response()->json(['post' => $post, 'user' => $post->user, 'success' => true, 'msg' => 'Post fetched successfully.'], 200);
     }
 
 
@@ -62,8 +71,10 @@ class PostController extends Controller implements HasMiddleware
             'body' => 'required'
         ]);
 
-        $post->update($fields);
-        return $post;
+        if (!$post->update($fields)) {
+            return response()->json(['success' => false, 'msg' => 'Error updating post!'], 500);
+        }
+        return response()->json(['post' => $post, 'user' => $post->user, 'success' => true, 'msg' => 'Post updated successfully.'], 200);
     }
 
 
@@ -72,8 +83,10 @@ class PostController extends Controller implements HasMiddleware
         // return auth()->user();
         Gate::authorize('modify', $post);
 
-        $post->delete();
+        if (!$post->delete()) {
+            return response()->json(['success' => false, 'msg' => 'Error deleting post!'], 500);
+        }
 
-        return ['message' => 'The post was deleted'];
+        return response()->json(['post' => $post, 'user' => $post->user, 'success' => true, 'msg' => 'Post deleted successfully.'], 200);
     }
 }

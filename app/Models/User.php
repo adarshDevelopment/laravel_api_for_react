@@ -50,4 +50,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class);
     }
+
+    public function pictures()
+    {
+        return $this->hasMany(Picture::class);
+    }
+
+    public function pictureList()
+    {
+        return $this->hasMany(PictureUser::class);
+    }
 }
