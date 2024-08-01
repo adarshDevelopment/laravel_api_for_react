@@ -28,7 +28,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 
 Route::post('/pictures', [PictureController::class, 'store'])->middleware('auth:sanctum');
+Route::get('/pictures', [PictureController::class, 'index'])->middleware('auth:sanctum');
 
 Route::post('/demo', [PictureController::class, 'demo'])->middleware('auth:sanctum');
-
-

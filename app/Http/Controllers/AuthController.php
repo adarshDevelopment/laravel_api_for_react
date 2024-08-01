@@ -56,7 +56,7 @@ class AuthController extends Controller
 
 
     public function logout(Request $request)
-    {   
+    {
         // deletes the userToken of the currently logged in user
         $request->user()->tokens()->delete();
 

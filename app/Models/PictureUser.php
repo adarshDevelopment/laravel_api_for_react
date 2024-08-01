@@ -9,6 +9,8 @@ class PictureUser extends Model
 {
     use HasFactory;
 
+    protected $table = 'picture_user';
+
     protected $fillable = [
         'file_name',
         'picture_id',
