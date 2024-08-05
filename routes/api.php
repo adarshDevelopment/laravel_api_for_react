@@ -28,6 +28,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 
 Route::post('/pictures', [PictureController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/pictures_multiple', [PictureController::class, 'storeMultiple'])->middleware('auth:sanctum');
 Route::get('/pictures', [PictureController::class, 'index']);
 
 Route::delete('/pictures/{id}', [PictureController::class, 'destroy'])->middleware('auth:sanctum');

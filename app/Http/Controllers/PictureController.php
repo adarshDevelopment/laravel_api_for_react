@@ -31,7 +31,7 @@ class PictureController extends Controller
     public function index()
     {
 
-        $this->pictures = PictureUser::all();
+        $this->pictures = PictureUser::orderBy('created_at', 'desc')->with('picture')->get();
 
         // $images = File::files('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads');
         $images = File::files(storage_path('app/public/uploads'));
@@ -65,6 +65,7 @@ class PictureController extends Controller
         // }
 
 
+        // return gettype($this->pictures->toArray());
         return response()->json(['success' => true, 'msg' => 'Picture successfully fetched', 'pictures' => $this->pictures], 200);
     }
 
@@ -80,7 +81,7 @@ class PictureController extends Controller
     {
         // $fileName = time() . '_' . $request->title . '.' . $request->file('image')->getClientOriginalExtension();
 
-        return $request->all();
+        // return $request->all();
 
 
         if (!$request->hasFile('image')) {
@@ -140,6 +141,71 @@ class PictureController extends Controller
         }
     }
 
+
+    public function storeMultiple(Request $request)
+
+    {
+
+
+        if (!$request->hasFile('images')) {
+            return response()->json(['success' => false, 'msg' => 'No pictures were selected'], 422);
+        }
+        // return $request->all();
+
+
+        try {
+            $fields = $request->validate([
+                'title' => 'required',
+                'images' => 'array',
+                'images*' => 'required|file|mimes:jpeg,png,jpg|max:2048',
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'msg' => $e->getMessage()], 422);
+        }
+
+
+
+        try {
+
+            DB::beginTransaction();
+
+            $picture = $request->user()->pictures()->create([
+                'title' => $request->title,
+                'user_id' => $request->user()->id
+            ]);
+
+            if (!$picture) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+            }
+
+
+            foreach ($request->images as $image) {
+                $fileName = time() . '_' . $request->title . '.' . $image->getClientOriginalExtension();
+
+                $picture_user_table = $request->user()->pictureList()->create([
+                    'user_id' => $request->user()->id,
+                    'picture_id' => $picture->id,
+                    'file_name' => $fileName
+                ]);
+
+                if (!$picture_user_table) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+                }
+
+                $image->storeAs('public/uploads', $fileName);
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+
+            // delete file
+
+            DB::rollBack();
+            return response()->json(['success' => false, 'msg' => $e->__tostring()], 500);
+        }
+    }
+
     public function destroy(Request $request, $id)
     {
 
@@ -168,7 +234,7 @@ class PictureController extends Controller
 
 
             // if count is less than 0, delete
-            $count = PictureUser::count()->where('')
+            // $count = PictureUser::count()->where('');
 
 
             $delete = Picture::destroy($picture_id);
