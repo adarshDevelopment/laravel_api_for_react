@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Picture extends Model
 {
     use HasFactory;
+    protected $table = 'pictures';
 
     protected $fillable = [
         'title',
@@ -19,8 +20,10 @@ class Picture extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function pictures()
+    public function pictureList()
     {
-        return $this->hasMany(PictureUser::class, 'picture_id', 'id');
+        return $this->hasMany(PictureList::class);
+        // return 'hello world';
+        // return $this->hasMany(PictureList::class, 'picture_id', 'id');
     }
 }

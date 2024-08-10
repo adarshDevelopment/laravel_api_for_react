@@ -59,6 +59,6 @@ class User extends Authenticatable
     public function pictureList()
     {
         // return $this->hasMany(PictureUser::class);
-        return $this->hasMany(PictureUser::class);
+        return $this->hasMany(PictureList::class);
     }
 }

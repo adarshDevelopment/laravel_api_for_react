@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Picture;
-use App\Models\PictureUser;
+use App\Models\PictureList;
 use App\Models\User;
 use Exception;
 use Illuminate\Auth\Events\Validated;
@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Monolog\Handler\PushoverHandler;
+use Illuminate\Support\Str;
+
+use function PHPUnit\Framework\isEmpty;
 
 class PictureController extends Controller
 {
@@ -31,8 +34,8 @@ class PictureController extends Controller
     public function index()
     {
 
-        $this->pictures = PictureUser::orderBy('created_at', 'desc')->with('picture')->get();
-
+        $this->pictures = PictureList::orderBy('created_at', 'desc')->with('pictureMain')->get();
+        // return $this->pictures;
         // $images = File::files('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads');
         $images = File::files(storage_path('app/public/uploads'));
         $imageUrls = [];
@@ -66,7 +69,7 @@ class PictureController extends Controller
 
 
         // return gettype($this->pictures->toArray());
-        return response()->json(['success' => true, 'msg' => 'Picture successfully fetched', 'pictures' => $this->pictures], 200);
+        return response()->json(['status' => true, 'message' => 'Picture successfully fetched', 'pictures' => $this->pictures], 200);
     }
 
     public function demo(Request $request)
@@ -79,13 +82,9 @@ class PictureController extends Controller
     public function store(Request $request)
 
     {
-        // $fileName = time() . '_' . $request->title . '.' . $request->file('image')->getClientOriginalExtension();
-
-        // return $request->all();
-
 
         if (!$request->hasFile('image')) {
-            return response()->json(['success' => false, 'msg' => 'No pictures were selected'], 422);
+            return response()->json(['status' => false, 'message' => 'No pictures were selected'], 422);
         }
 
 
@@ -95,7 +94,7 @@ class PictureController extends Controller
                 'image' => 'required|file|mimes:jpeg,png,jpg|max:2048',
             ]);
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'msg' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
 
 
@@ -111,7 +110,7 @@ class PictureController extends Controller
 
             if (!$picture) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+                return response()->json(['status' => false, 'message' => 'Error inserting picture in picture table'], 500);
             }
             $fileName = time() . '_' . $request->title . '.' . $request->file('image')->getClientOriginalExtension();
 
@@ -123,12 +122,12 @@ class PictureController extends Controller
 
             if (!$picture_user_table) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+                return response()->json(['status' => false, 'message' => 'Error inserting picture in picture table'], 500);
             }
 
             if ($request->file('image')->storeAs('public/uploads/', $fileName)) {
                 DB::commit();
-                return response()->json(['success' => true, 'msg' => 'Picture successfully uploaded'], 200);
+                return response()->json(['status' => true, 'message' => 'Picture successfully uploaded'], 200);
             } else {
                 DB::rollBack();
             }
@@ -137,7 +136,7 @@ class PictureController extends Controller
             // delete file
 
             DB::rollBack();
-            return response()->json(['success' => false, 'msg' => $e->__tostring()], 500);
+            return response()->json(['status' => false, 'message' => $e->__tostring()], 500);
         }
     }
 
@@ -146,13 +145,11 @@ class PictureController extends Controller
 
     {
 
-
         if (!$request->hasFile('images')) {
-            return response()->json(['success' => false, 'msg' => 'No pictures were selected'], 422);
+            return response()->json(['status' => false, 'message' => 'No pictures were selected'], 422);
         }
-        // return $request->all();
 
-
+        // validation
         try {
             $fields = $request->validate([
                 'title' => 'required',
@@ -160,38 +157,38 @@ class PictureController extends Controller
                 'images*' => 'required|file|mimes:jpeg,png,jpg|max:2048',
             ]);
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'msg' => $e->getMessage()], 422);
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
         }
 
 
-
+        // insertion begins
         try {
 
             DB::beginTransaction();
-
+            // save to pictures table
             $picture = $request->user()->pictures()->create([
                 'title' => $request->title,
                 'user_id' => $request->user()->id
             ]);
 
+            // create in main pictures table
             if (!$picture) {
                 DB::rollBack();
-                return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+                return response()->json(['status' => false, 'message' => 'Error inserting picture in picture table'], 500);
             }
 
-
             foreach ($request->images as $image) {
-                $fileName = time() . '_' . $request->title . '.' . $image->getClientOriginalExtension();
+                $fileName = time() . '_' . Str::random(5) . '__' . $request->title . '.' . $image->getClientOriginalExtension();
 
-                $picture_user_table = $request->user()->pictureList()->create([
-                    'user_id' => $request->user()->id,
+                $save_to_picture_list_table = $picture->pictureList()->create([
                     'picture_id' => $picture->id,
-                    'file_name' => $fileName
+                    'file_name' => $fileName,
+                    'user_id' => $request->user()->id
                 ]);
 
-                if (!$picture_user_table) {
+                if (!$save_to_picture_list_table) {
                     DB::rollBack();
-                    return response()->json(['success' => false, 'msg' => 'Error inserting picture in picture table'], 500);
+                    return response()->json(['status' => false, 'message' => 'Error inserting picture in picture table'], 500);
                 }
 
                 $image->storeAs('public/uploads', $fileName);
@@ -202,51 +199,47 @@ class PictureController extends Controller
             // delete file
 
             DB::rollBack();
-            return response()->json(['success' => false, 'msg' => $e->__tostring()], 500);
+            return response()->json(['status' => false, 'message' => $e->__tostring()], 500);
         }
     }
 
     public function destroy(Request $request, $id)
     {
+        // fetch picture through User model
+        $picture =  $request->user()->pictureList()->where('id', $id)->first();
+        if (!$picture) {
+            return response()->json(['status' => false, 'message' => 'Picture not found!'], 404);
+        }
 
-        $pictures = $request->user()->pictureList()->where('picture_id', $id)->get();
-
+        // return $picture;
         // delete recrod from pictures table
         try {
             DB::beginTransaction();
 
-            $pictures = $request->user()->pictureList()->where('picture_id', $id)->get();   // all pictures from pivot table
-
-            $picture_id = $request->user()->pictureList()->where('picture_id', $id)->first()->picture_id;
-            // $delete = Picture::destroy($id);    // delete main record and as well as all records on picture_user table
-
-            foreach ($pictures as $picture) {
-                // deleting each record at once and removing files as well
-                if (!$picture->delete()) {
-                    DB::rollBack();
-                    return response()->json(['success' => false, 'msg' => 'Error deleting all selected pictures!'], 500);
-                }
-
-                if (Storage::exists('public/uploads/' . $picture->file_name)) {
-                    Storage::delete('public/uploads/' . $picture->file_name);
-                }
+            $delete = $picture->delete();
+            if ($delete < 1) {
+                return response()->json(['status' => false, 'message' => 'Error deleting picture. Please try again!'], 500);
             }
 
+            $picture_id = $picture->picture_id;
+            $otherPictures = $request->user()->pictureList()->where('picture_id', $picture_id)->get();
 
-            // if count is less than 0, delete
-            // $count = PictureUser::count()->where('');
 
-
-            $delete = Picture::destroy($picture_id);
-            if (!$delete) {
-                return response()->json(['success' => false, 'msg' => 'Something went wrong. Please try again!'], 500);
+            if ($otherPictures->count() < 1) {
+                $request->user()->pictures->where('id', $picture_id)->first()->delete();
             }
+
+            if (Storage::exists('public/uploads/' . $picture->file_name)) {
+                Storage::delete('public/uploads/' . $picture->file_name);
+            }
+            // delete record from pictures table 
+
 
             DB::commit();
-            return response()->json(['success' => true, 'msg' => 'Picture successfully fetched', 'pictures' => $this->pictures], 200);
+            return response()->json(['status' => true, 'message' => 'Picture deleted fetched', 'pictures' => $this->pictures], 200);
         } catch (Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false, 'msg' => 'Error deleting picture!'], 500);
+            return response()->json(['status' => false, 'message' => 'Error deleting picture!', 'Exception' => $e->__toString()], 500);
         }
 
 
