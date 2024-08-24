@@ -144,7 +144,7 @@ class PictureController extends Controller
     public function storeMultiple(Request $request)
 
     {
-
+        // return $request->all();
         if (!$request->hasFile('images')) {
             return response()->json(['status' => false, 'message' => 'No pictures were selected'], 422);
         }
