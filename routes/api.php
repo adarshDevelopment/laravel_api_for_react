@@ -7,6 +7,8 @@ use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// user roles updated
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
