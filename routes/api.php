@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PictureController;
 use App\Http\Controllers\PostController;
+use App\Http\Middleware\AdminMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -11,9 +12,19 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
+// Admin middleware
+Route::middleware([AdminMiddleware::class, 'auth:sanctum'])->group(function () {
+    Route::get('/admin', function (Request $request) {
+        return $request->user();
+    });
+});
+
+
 Route::get('/test', function () {
     return 'hello world';
 });
+
+
 
 Route::apiResource('posts', PostController::class);
 
@@ -24,6 +35,9 @@ Route::post('/login', [AuthController::class, 'login']);
 
 
 // #########   PROTECTED ROUTES 
+
+
+
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 

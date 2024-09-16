@@ -58,6 +58,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         // deletes the userToken of the currently logged in user
+        // $request->user() returns the currently logged in user because the user is authenticated by the middleware
         $request->user()->tokens()->delete();
 
         return response()->json(['message' => 'You are logged out!'], 200);

@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role'
     ];
 
     /**
@@ -60,5 +61,18 @@ class User extends Authenticatable
     {
         // return $this->hasMany(PictureUser::class);
         return $this->hasMany(PictureList::class);
+    }
+
+
+    // Authorization methods
+    public function isAdmin()
+    {
+        // return if role is 1
+        return $this->role === 1;
+    }
+
+    public function isUser()
+    {
+        return $this->role != 1;
     }
 }
